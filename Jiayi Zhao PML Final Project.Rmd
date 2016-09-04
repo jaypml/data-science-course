@@ -1,0 +1,121 @@
+---
+title: "Pratical Machine Learning Final Project- Predict using Fit Tech Device Data "
+author: "Jay Zhao"
+date: "September 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+Fit Tech devices such as Jawbone Up, Nike FuelBand, and Fitbit has amassed huge amount of body movment data from the growing user base . A key applicateion is to quantify how much of a particular activity user do. 
+
+WLE dataset records data  from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. In this project, I will be using this dataset to predict 5 different ways of how participant perform barbell lifts.
+
+Data Source: 
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.Read more <http://groupware.les.inf.puc-rio.br/har#ixzz4JHyPaxsD>
+
+
+# Data prepration 
+
+1. Read in training and test data. 
+Note: I'm using data.table package to reduce processing time. And then I convert data format from "data.table" format to "data frame" format.
+```{r cars}
+library(data.table)
+
+traintable<- fread("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", header = T, sep = ',',na.strings = c("NA","","#DIV/0!"))
+traintable<-as.data.frame.matrix(traintable) 
+
+valtable<- fread("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", header = T, sep = ',',na.strings = c("NA","","#DIV/0!"))
+valtable<-as.data.frame.matrix(valtable) 
+```
+
+2. Handle missing/irrelevant data
+Note: Since there are large amount of missing values in this dataset, we need to remove features with large proportion of missing value. I set a cutoff at 90% in this instance. i.e. If a variable has 90% of missing data, we'll remove this attribute from our prediction model. Since this is not a time series or longtitude study, we don'the first 7 columns, which are are ID and time serires data. 
+
+```{r cars1}
+#remove fist 7 columns
+traintemp<-traintable[-(1:7)]
+#remove all features with 90% of values are missing
+traindata<-traintemp[,colSums(is.na(traintemp)) <= nrow(traintemp)*0.9]
+```
+
+3. Data attribute 
+Note: Make sure that predictors are numeric and dependant variable is factor. 
+```{r cars2}
+traindata[, 1:52] <- sapply(traindata[, 1:52], as.numeric)
+traindata$classe<- as.factor(traindata$classe)
+
+# All predictors to be used in the modelling process
+
+colnames(traindata[, 1:52])
+
+```
+
+## Model Fitting 
+
+1. Create training and test data sample
+```{r cars3}
+
+library('caret')
+set.seed(100)
+
+intrain<-createDataPartition(y=traindata$classe,p=0.6,list=FALSE)
+
+trainsample<-traindata[intrain,]
+testsample<-traindata[-intrain,]
+
+```
+
+2. Fit Random Forrest model
+Note: I'm somewhat an environmentalist. That's why I've decided to fit Random Forrest model first :) 
+
+```{r cars4}
+
+library('randomForest')
+rfmodel <- randomForest(classe~., trainsample)
+
+pred_rf<- predict(rfmodel,testsample,type='class')
+
+confusionMatrix(pred_rf, testsample$classe)
+```
+3. Fit Decision Tree model
+```{r cars5}
+library(rpart)
+
+dtmodel <- rpart(classe ~ ., data=trainsample, method="class")
+
+pred_dt<-predict(dtmodel,testsample,type='class')
+confusionMatrix(pred_dt, testsample$classe)
+```
+
+4. Fit Support Vector Machine Model
+```{r cars51}
+
+library('e1071')
+
+svmmodel<-svm(classe~.,data=trainsample,method='class')
+
+pred_svm<-predict(svmmodel,testsample,type='class')
+confusionMatrix(pred_svm,testsample$classe)
+```
+
+## Model Selection
+
+Based on a number of key model assessment metrics, Random Forest model has the highest accuray, sensitivity, specificity across all the classfications. Random Forest model will be the best model to fit the validation set.
+
+Code to fit validation dataset and prediction outcome
+
+```{r cars6}
+
+valsample<-valtable[,colnames(valtable) %in% colnames(traindata[,1:52])]
+
+valsample[, 1:52] <- sapply(valsample[, 1:52], as.numeric)
+
+predict(rfmodel,valsample,type='class')
+```
+
+
