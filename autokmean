@@ -1,0 +1,33 @@
+
+
+library('cluster')
+
+
+sample_scale<-scale(XX)
+
+sample_scale<-sapply(XXX,as.numeric)
+
+
+
+cost_df<-data.frame()
+
+
+for(i in 1:50){
+  
+  
+  #Run kmeans for each level of i, allowing up to 100 iterations for convergence
+  kmeans<- kmeans(XXX,i)
+  
+  #Combine cluster number and cost together, write to df
+  cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
+  
+}
+
+cost_df
+
+
+plot(cost_df$i,cost_df$V2)
+
+write.csv(XXXX,,row.names=F)
+
+nrow(sample)
